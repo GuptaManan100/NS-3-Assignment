@@ -1,7 +1,7 @@
 
 #define FINISH 20.0
-#define RSS (-80.0) // dBm
-#define PHYMODE "HtMcs7"
+#define RSS (-0.0) // dBm
+// #define PHYMODE "HtMcs7"
 #include <string>
 #include <vector>
 #include <cmath>
@@ -38,7 +38,8 @@ double FairnessIndex(std::vector < double >);
 int main(int argc, char** argv) {
 
     std::cout << std::fixed << std::setprecision(2);
-    
+
+    // Parse command line for type of TCP to use
     tcpType = "veno";
     
     CommandLine cmd;
@@ -74,56 +75,66 @@ int main(int argc, char** argv) {
     }
 }
 
+// Testing function using different packetSizes
+
 void testUsingPacketSize(size_t packetSize) {
 
     NodeContainer nodes;
     nodes.Create(4);
     
     // Setup Wired link
-    
+
+    // Setup p2p with data given in problem
     PointToPointHelper p2pForBS;
     p2pForBS.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
     p2pForBS.SetChannelAttribute("Delay", StringValue("100ms"));
 
-    double bitsPerSecond = 10 * 1e6 * 100 * 1e-3;
-    double packetsPerSecond = bitsPerSecond / (8 * packetSize);
-    size_t queueSize = int(std::roundl(packetsPerSecond));
-    
+    // Compute Bandwidth-Delay product
+    // double bitsPerSecond = 10 * 1e6 * 100 * 1e-3;
+    // double packetsPerSecond = bitsPerSecond / (8 * packetSize);
+    // size_t queueSize = int(std::roundl(packetsPerSecond));
+
+    // Setup Drop Tail queue with Buffer size dependent on Bandwidth-Delay product
     p2pForBS.SetQueue("ns3::DropTailQueue",
-                 "MaxSize", StringValue(std::to_string(queueSize) + "p"));
+                      "MaxSize", StringValue("250000p")); //StringValue(std::to_string(queueSize) + "p"));
     
     NetDeviceContainer bsDevices =
         p2pForBS.Install(nodes.Get(1), nodes.Get(2));
 
     // Setup Wireless link
     
-    YansWifiChannelHelper channelHelper0; // = YansWifiChannelHelper::Default();
-    channelHelper0.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
-                                       // "Speed", DoubleValue(1000.0));
-    channelHelper0.AddPropagationLoss ("ns3::FixedRssLossModel", "Rss", DoubleValue(RSS));
+    YansWifiChannelHelper channelHelper0 = YansWifiChannelHelper::Default();
+    // Medium works at constant wave speed
+    // channelHelper0.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel"); //, "Speed", DoubleValue(1000000.0));
+    // channelHelper0.AddPropagationLoss ("ns3::FixedRssLossModel", "Rss", DoubleValue(RSS));
     Ptr<YansWifiChannel> channel0 = channelHelper0.Create();
+    // Ptr<ConstantSpeedPropagationDelayModel> delayModel =
+        // new ConstantSpeedPropagationDelayModel();
+    // delayModel -> SetSpeed(1000);
+    // channel0->SetPropagationDelayModel(delayModel);
     
-    YansWifiChannelHelper channelHelper1; // = YansWifiChannelHelper::Default();
-    channelHelper1.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
-                                       // "Speed", DoubleValue(1000.0));
-    channelHelper1.AddPropagationLoss ("ns3::FixedRssLossModel", "Rss", DoubleValue(RSS));
+    YansWifiChannelHelper channelHelper1 = YansWifiChannelHelper::Default();
+    // Medium works at constant speed of waves
+    // channelHelper1.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel"); //, "Speed", DoubleValue(1000000.0));
+    // channelHelper1.AddPropagationLoss ("ns3::FixedRssLossModel", "Rss", DoubleValue(RSS));
     Ptr<YansWifiChannel> channel1 = channelHelper1.Create();
-
+    // channel1->SetPropagationDelayModel(delayModel);
+    
     // See docs https://www.nsnam.org/doxygen/classns3_1_1_constant_speed_propagation_delay_model.html
     // for this value.
     // double speedOfLight = 1e7;
 
     // This will the distance between N0 and BS0 and between N1 and BS1
-    double distanceFor20ms = 20;
+    double distance = 50;
 
-    // double distanceFor20ms = 50;
+    // double distance = 50;
 
     // Initialize the physical helpers for the wifi channel
     YansWifiPhyHelper phyHelper0 = YansWifiPhyHelper::Default();
-    phyHelper0.Set("RxGain", DoubleValue(0.));
+    // phyHelper0.Set("RxGain", DoubleValue(0.));
     
     YansWifiPhyHelper phyHelper1 = YansWifiPhyHelper::Default();
-    phyHelper1.Set("RxGain", DoubleValue(0.));
+    // phyHelper1.Set("RxGain", DoubleValue(0.));
 
     WifiHelper wifi;
     // wifi.SetStandard(WIFI_PHY_STANDARD_80211n_5GHZ);
@@ -168,12 +179,12 @@ void testUsingPacketSize(size_t packetSize) {
     Ptr<ListPositionAllocator> locationVector =
         CreateObject<ListPositionAllocator> ();
 
-    // Located at a `distanceFor20ms` distance from each other on a line
+    // Located at a `distance` distance from each other on a line
     
-    locationVector -> Add(Vector(distanceFor20ms * 0, 0.0, 0.0));
-    locationVector -> Add(Vector(distanceFor20ms * 1, 0.0, 0.0));
-    locationVector -> Add(Vector(distanceFor20ms * 2, 0.0, 0.0));
-    locationVector -> Add(Vector(distanceFor20ms * 3, 0.0, 0.0));
+    locationVector -> Add(Vector(distance * 0, 0.0, 0.0));
+    locationVector -> Add(Vector(distance * 1, 0.0, 0.0));
+    locationVector -> Add(Vector(distance * 2, 0.0, 0.0));
+    locationVector -> Add(Vector(distance * 3, 0.0, 0.0));
 
     mobility.SetPositionAllocator (locationVector);
     mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
@@ -198,15 +209,16 @@ void testUsingPacketSize(size_t packetSize) {
     addressHelper.SetBase("11.1.1.0", "255.255.255.0");
     Ipv4InterfaceContainer ifLeft = addressHelper.Assign(pathLeft);
     
-    addressHelper.SetBase("12.2.2.0", "255.255.255.0");
+    addressHelper.SetBase("13.3.3.0", "255.255.255.0");
     Ipv4InterfaceContainer ifRight = addressHelper.Assign(pathRight);
     
-    addressHelper.SetBase("13.3.3.0", "255.255.255.0");
+    addressHelper.SetBase("12.2.2.0", "255.255.255.0");
     Ipv4InterfaceContainer ifMiddle = addressHelper.Assign(bsDevices);
 
     // Set up Routing tables so that directions are known at the start
     Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
-    
+
+    // Random port
     uint16_t sinkPort = 4290;
  
     // Get Address assigned to endDevice1
@@ -215,11 +227,13 @@ void testUsingPacketSize(size_t packetSize) {
 
     // std::cout << ifRight.GetAddress(0) << ", " << ifRight.GetAddress(1) << std::endl;
 
-    // Install a packet sink in N1 (node 3)
+    // Install a packet sink in N1 (node 3), and setup TCP
     PacketSinkHelper sinkHelper("ns3::TcpSocketFactory",
                                 InetSocketAddress(Ipv4Address::GetAny(),
                                                   sinkPort));
     ApplicationContainer sinkApp = sinkHelper.Install(nodes.Get(3)); // CHANGE
+
+    // Set timeframe for sink Application
     sinkApp.Start(Seconds(0.0));
     sinkApp.Stop(Seconds(FINISH));
 
@@ -256,15 +270,19 @@ void testUsingPacketSize(size_t packetSize) {
     auto dat = flowStats.begin() -> second;
 
     // Compute required statistics and display them.
-    
+ 
     double rxBits = 8.0 * dat.rxBytes;
+
+    // Total time is just delay between last packet received
+    // and first packet sent
     double timeTaken = dat.timeLastRxPacket.GetSeconds() -
         dat.timeFirstTxPacket.GetSeconds();
     
     double throughput =  rxBits / timeTaken;
 
+    // Compute Jains fairness index
     double fairness = FairnessIndex({throughput});
-
+    
     std::cout << "Throughput: " << throughput << " Fairness: " << fairness << std::endl;
 
     // Serialize Flow Monitor output to an XML file and export it.
