@@ -262,7 +262,7 @@ void testUsingPacketSize(size_t packetSize) {
     // Compute Jains fairness index
     double fairness = FairnessIndex({throughput});
     
-    std::cout << "Size: " << packetSize << " Throughput: " << throughput << " Fairness: " << fairness << std::endl;
+    std::cout << packetSize << ", " << throughput / 1000 << ", " << fairness << std::endl;
 
     // Serialize Flow Monitor output to an XML file and export it.
     
